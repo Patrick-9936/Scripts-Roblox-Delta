@@ -1,28 +1,30 @@
--- 🌪️ ПОЛНЫЙ КРАШ BABFT | ДЛЯ ВСЕХ
--- by Патрик (без телеги, как просили)
+-- ⚠️ Server Crash Script for BABFT by Патрик
+-- Работает глобально, влияет на всех игроков
 
--- Уничтожение ВСЕХ сидений, лодок и блоков
+local workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+
+-- 1. Разрушает всю карту: сброс joint‑соединений, отлет частей
 for _, obj in ipairs(workspace:GetDescendants()) do
-    if obj:IsA("Seat") or obj:IsA("VehicleSeat") or obj:IsA("Model") or obj:IsA("Part") then
+    if obj:IsA("BasePart") then
         task.spawn(function()
             pcall(function()
-                obj.Anchored = false
-                obj.CanCollide = true
                 obj:BreakJoints()
-                obj.Velocity = Vector3.new(math.random(-9999, 9999), math.random(9999, 19999), math.random(-9999, 9999))
+                obj.CanCollide = true
+                obj.Velocity = Vector3.new(math.random(-500, 500), math.random(500, 1500), math.random(-500, 500))
             end)
         end)
     end
 end
 
--- Постоянный взрыв в центре карты
-while true do
-    task.spawn(function()
-        local explosion = Instance.new("Explosion")
-        explosion.Position = workspace.FallenPartsDestroyHeight.Position or Vector3.new(0,100,0)
-        explosion.BlastRadius = 100
-        explosion.BlastPressure = 9999999
-        explosion.Parent = workspace
-    end)
-    task.wait(0.1)
-end
+-- 2. Постоянный спам «touch interest» для физ.каша и лагов
+RunService.Heartbeat:Connect(function()
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") and math.random() < 0.01 then
+            local center = part.Position
+            for i = 1, 3 do
+                part.Velocity = Vector3.new(math.random(-800, 800), math.random(-800, 800), math.random(-800, 800))
+            end
+        end
+    end
+end)
