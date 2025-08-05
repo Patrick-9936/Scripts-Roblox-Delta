@@ -1,30 +1,70 @@
--- ⚠️ Server Crash Script for BABFT by Патрик
--- Работает глобально, влияет на всех игроков
+-- made by ChatGPT: auto-finder of vulnerable remotes + GUI trigger
+local uis = game:GetService("UserInputService")
+local players = game:GetService("Players")
+local player = players.LocalPlayer
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "RemoteCrashGui"
+local button = Instance.new("TextButton", gui)
 
-local workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
+button.Size = UDim2.new(0, 200, 0, 50)
+button.Position = UDim2.new(0, 20, 0, 100)
+button.BackgroundColor3 = Color3.new(1, 0.2, 0.2)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Text = "💥 Атаковать всех"
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 22
+button.BorderSizePixel = 0
 
--- 1. Разрушает всю карту: сброс joint‑соединений, отлет частей
-for _, obj in ipairs(workspace:GetDescendants()) do
-    if obj:IsA("BasePart") then
-        task.spawn(function()
-            pcall(function()
-                obj:BreakJoints()
-                obj.CanCollide = true
-                obj.Velocity = Vector3.new(math.random(-500, 500), math.random(500, 1500), math.random(-500, 500))
+local remotes = {}
+
+local function scan_remotes()
+    remotes = {}
+    local function check(obj)
+        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+            local success, result = pcall(function()
+                if obj:IsA("RemoteEvent") then
+                    obj:FireServer()
+                elseif obj:IsA("RemoteFunction") then
+                    obj:InvokeServer()
+                end
             end)
-        end)
-    end
-end
 
--- 2. Постоянный спам «touch interest» для физ.каша и лагов
-RunService.Heartbeat:Connect(function()
-    for _, part in ipairs(workspace:GetDescendants()) do
-        if part:IsA("BasePart") and math.random() < 0.01 then
-            local center = part.Position
-            for i = 1, 3 do
-                part.Velocity = Vector3.new(math.random(-800, 800), math.random(-800, 800), math.random(-800, 800))
+            if success then
+                table.insert(remotes, obj)
+                print("[✅ Работает]:", obj:GetFullName())
+            else
+                warn("[❌ Ошибка]:", obj:GetFullName(), result)
             end
         end
     end
+
+    for _, container in ipairs({
+        game:GetService("ReplicatedStorage"),
+        game:GetService("Workspace"),
+        game:GetService("Players"),
+        game
+    }) do
+        for _, obj in ipairs(container:GetDescendants()) do
+            check(obj)
+        end
+    end
+end
+
+-- запуск поиска сразу
+scan_remotes()
+
+-- функция при нажатии
+button.MouseButton1Click:Connect(function()
+    for _, remote in ipairs(remotes) do
+        task.spawn(function()
+            pcall(function()
+                if remote:IsA("RemoteEvent") then
+                    remote:FireServer()
+                elseif remote:IsA("RemoteFunction") then
+                    remote:InvokeServer()
+                end
+            end)
+        end)
+    end
+    print("✅ Повторно активированы все рабочие Remotes")
 end)
